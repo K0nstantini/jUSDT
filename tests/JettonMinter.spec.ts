@@ -3,6 +3,7 @@ import { JettonMinter } from "../wrappers/JettonMinter";
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, toNano, Cell, beginCell, Dictionary } from '@ton/core';
 import '@ton/test-utils';
+import { writeFileSync } from "fs";
 
 describe('JettonMinter', () => {
 	let code: Cell;
@@ -49,21 +50,43 @@ describe('JettonMinter', () => {
 		let dict = data.beginParse()
 			.skip(8)
 			.loadDict(Dictionary.Keys.BigInt(256), Dictionary.Values.Cell());
-		let uriCell = dict.get(BigInt('0x70e5d7b6a29b392f85076fe15ca2f2053c56c2338728c4e33c9e8ddb1ee827cc'));
+
+		let uriKey = BigInt('0x70e5d7b6a29b392f85076fe15ca2f2053c56c2338728c4e33c9e8ddb1ee827cc');
+		let uriCell = dict.get(uriKey);
 		expect(uriCell).not.toBeNull();
 		if (uriCell == null) return;
-		let uriHex = uriCell?.beginParse().skip(8).toString();
-		let uri = hex_to_ascii(uriHex);
+		let uri = get_str_from_cell(uriCell);
 		console.log(uri);
 
 		let imageCell = dict.get(BigInt('0x6105d6cc76af400325e94d588ce511be5bfdbb73b437dc51eca43917d7a43e3d'));
 		expect(imageCell).not.toBeNull();
 		if (imageCell == null) return;
-		let imageHex = imageCell?.beginParse().skip(8).toString();
-		let image = hex_to_ascii(imageHex);
+		let image = get_str_from_cell(imageCell);
 		console.log(image);
+
+		let newUriCell = beginCell()
+			.storeUint(0, 8)
+			.storeStringTail('https://raw.githubusercontent.com/K0nstantini/jUSDT/main/data.json')
+			.endCell();
+
+		let newUri = get_str_from_cell(newUriCell);
+		console.log(newUri);
+
+		dict.set(uriKey, newUriCell);
+		let newData = beginCell()
+			.storeUint(0, 8)
+			.storeDict(dict)
+			.endCell();
+		let boc: Buffer = newData.toBoc();
+		console.log(boc.toString('hex'));
+
 	});
 });
+
+function get_str_from_cell(cell: Cell) {
+	let uriHex = cell.beginParse().skip(8).toString();
+	return hex_to_ascii(uriHex);
+}
 
 
 export function hex_to_ascii(hex: string) {

@@ -2,7 +2,6 @@ import { Cell, beginCell, toNano } from '@ton/core';
 import { JettonMinter } from '../wrappers/JettonMinter';
 import { NetworkProvider, compile } from '@ton/blueprint';
 import { buildOnchainMetadata } from './minterContent';
-import metadata from "./data.json";
 
 export async function run(provider: NetworkProvider) {
 
