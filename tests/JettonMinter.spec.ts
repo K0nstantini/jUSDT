@@ -23,10 +23,9 @@ describe('JettonMinter', () => {
 		random = await blockchain.treasury('random');
 		deployer = await blockchain.treasury('deployer');
 
-		// const randomSeed = Math.floor(Math.random() * 10000);
 		jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
+			adminAddress: deployer.address,
 			content: minterContent(),
-			// content: beginCell().storeUint(randomSeed, 256).endCell(),
 			jettonWalletCode: await compile('JettonWallet')
 
 		}, code));
@@ -55,12 +54,14 @@ describe('JettonMinter', () => {
 		let uriKey = BigInt('0x70e5d7b6a29b392f85076fe15ca2f2053c56c2338728c4e33c9e8ddb1ee827cc');
 		let uriCell = dict.get(uriKey);
 		expect(uriCell).not.toBeNull();
+		expect(uriCell).not.toBeUndefined();
 		if (uriCell == null) return;
 		let uri = get_str_from_cell(uriCell);
 		console.log(uri);
 
 		let imageCell = dict.get(BigInt('0x6105d6cc76af400325e94d588ce511be5bfdbb73b437dc51eca43917d7a43e3d'));
 		expect(imageCell).not.toBeNull();
+		expect(imageCell).not.toBeUndefined();
 		if (imageCell == null) return;
 		let image = get_str_from_cell(imageCell);
 		console.log(image);
@@ -83,7 +84,7 @@ describe('JettonMinter', () => {
 
 	});
 
-	it.skip('should mint', async () => {
+	it('should mint', async () => {
 		let res = await jettonMinter.sendMint(deployer.getSender(), {
 			toAddress: random.address,
 			jettonAmount: 1000n,

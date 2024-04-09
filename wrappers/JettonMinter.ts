@@ -2,6 +2,7 @@ import { TupleItemSlice } from '@ton/core';
 import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode } from '@ton/core';
 
 export type JettonMinterConfig = {
+	adminAddress: Address;
 	content: Cell;
 	jettonWalletCode: Cell;
 };
@@ -9,6 +10,7 @@ export type JettonMinterConfig = {
 export function jettonMinterConfigToCell(config: JettonMinterConfig): Cell {
 	return beginCell()
 		.storeCoins(0)
+		.storeAddress(config.adminAddress)
 		.storeRef(config.content)
 		.storeRef(config.jettonWalletCode)
 		.endCell();
