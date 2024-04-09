@@ -7,8 +7,6 @@
 #include "imports/config.fc";
 #include "imports/discovery-params.fc";
 
-cell jetton_content() asm "B{b5ee9c724102090100011500010300c001020120020702016e03050141bf04175b31dabd000c97a53562339446f96ff6edced0df7147b290e45f5e90f8f604009c0068747470733a2f2f6272696467652e746f6e2e6f72672f746f6b656e2f312f3078646163313766393538643265653532336132323036323036393934353937633133643833316563372e706e670141bf03975eda8a6ce4be141dbf85728bc814f15b08ce1ca3138cf27a376c7ba09f320600860068747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f4b306e7374616e74696e692f6a555344542f6d61696e2f646174612e6a736f6e0143bff7407e978f01a40711411b1acb773a96bdd93fa83bb5ca8435013c8c4b3ac91f400800040036937d2cd1} B>boc PUSHREF";
-
 slice zero_address() inline {
     return begin_cell().store_uint(0, 2).end_cell().begin_parse();
 }
@@ -77,7 +75,7 @@ slice zero_address() inline {
     (int sender_wc, int sender_address_hash) = parse_std_addr(sender_address);
 
     if (op == op::mint) {
-        throw_unless(error::bridge_not_sender, (sender_wc == -1) & (sender_address_hash == bridge_address_hash));
+        ;; throw_unless(error::bridge_not_sender, (sender_wc == -1) & (sender_address_hash == bridge_address_hash));
         slice to_address = in_msg_body~load_msg_addr();
 
         int rest_amount = pair_first(get_balance()) - minter_min_tons_for_storage;
@@ -175,7 +173,38 @@ slice zero_address() inline {
 
 (int, int, slice, cell, cell) get_jetton_data() method_id {
     (int total_supply, cell content, cell jetton_wallet_code) = load_data();
-    return (total_supply, -1, zero_address(), jetton_content(), jetton_wallet_code);
+    cell content_dict = new_dict();
+
+    (
+        int chain_id,
+        int token_address,
+        int token_decimals
+    ) = unpack_wrapped_token_data(content);
+
+    slice decimals_slice = encode_number_to_text(token_decimals, 10);
+    slice chain_id_value = encode_number_to_text(chain_id, 10);
+    slice token_address_value = encode_number_to_text(token_address, 16);
+    builder uri_builder = begin_cell() ;; max (232 + 80 + 24 + 320) = 656 bits
+            .store_slice("https://bridge.ton.org/token/") ;; 29 chars (232 bits)
+            .store_slice(chain_id_value) ;; max 10 chars (80 bits)
+            .store_slice("/0x") ;; 24 bits
+            .store_slice(token_address_value); ;; 40 chars (320 bits)
+
+    ;; slice uri_slice = uri_builder.store_slice(".json").end_cell().begin_parse();
+    slice uri_slice = begin_cell()
+	    .store_slice("https://raw.githubusercontent.com/K0nstantini/jUSDT/main/data.json")
+	    .end_cell()
+	    .begin_parse();
+    slice image_slice = uri_builder.store_slice(".png").end_cell().begin_parse();
+
+    content_dict~udict_set_ref(256, "uri"H, pack_metadata_value(uri_slice));
+    content_dict~udict_set_ref(256, "image"H, pack_metadata_value(image_slice));
+    content_dict~udict_set_ref(256, "decimals"H, pack_metadata_value(decimals_slice));
+
+    ;; https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md#content-representation
+    cell onchain_content = begin_cell().store_uint(0, 8).store_dict(content_dict).end_cell();
+
+    return (total_supply, -1, zero_address(), onchain_content, jetton_wallet_code);
 }
 
 slice get_wallet_address(slice owner_address) method_id {

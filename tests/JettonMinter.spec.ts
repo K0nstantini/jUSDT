@@ -4,6 +4,7 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, toNano, Cell, beginCell, Dictionary } from '@ton/core';
 import '@ton/test-utils';
 import { writeFileSync } from "fs";
+import { minterContent } from "../scripts/deployJettonMinter";
 
 describe('JettonMinter', () => {
 	let code: Cell;
@@ -14,21 +15,21 @@ describe('JettonMinter', () => {
 
 	let blockchain: Blockchain;
 	let jettonMinter: SandboxContract<JettonMinter>;
+	let deployer: SandboxContract<TreasuryContract>;
 	let random: SandboxContract<TreasuryContract>;
 
 	beforeEach(async () => {
 		blockchain = await Blockchain.create();
 		random = await blockchain.treasury('random');
+		deployer = await blockchain.treasury('deployer');
 
-		const randomSeed = Math.floor(Math.random() * 10000);
+		// const randomSeed = Math.floor(Math.random() * 10000);
 		jettonMinter = blockchain.openContract(JettonMinter.createFromConfig({
-			// content: minterContent(),
-			content: beginCell().storeUint(randomSeed, 256).endCell(),
+			content: minterContent(),
+			// content: beginCell().storeUint(randomSeed, 256).endCell(),
 			jettonWalletCode: await compile('JettonWallet')
 
 		}, code));
-
-		const deployer = await blockchain.treasury('deployer');
 
 		const deployResult = await jettonMinter.sendDeploy(deployer.getSender(), toNano('0.05'));
 
@@ -64,21 +65,41 @@ describe('JettonMinter', () => {
 		let image = get_str_from_cell(imageCell);
 		console.log(image);
 
-		let newUriCell = beginCell()
-			.storeUint(0, 8)
-			.storeStringTail('https://raw.githubusercontent.com/K0nstantini/jUSDT/main/data.json')
-			.endCell();
+		// let newUriCell = beginCell()
+		// 	.storeUint(0, 8)
+		// 	.storeStringTail('https://raw.githubusercontent.com/K0nstantini/jUSDT/main/data.json')
+		// 	.endCell();
+		//
+		// let newUri = get_str_from_cell(newUriCell);
+		// console.log(newUri);
+		//
+		// dict.set(uriKey, newUriCell);
+		// let newData = beginCell()
+		// 	.storeUint(0, 8)
+		// 	.storeDict(dict)
+		// 	.endCell();
+		// let boc: Buffer = newData.toBoc();
+		// console.log(boc.toString('hex'));
 
-		let newUri = get_str_from_cell(newUriCell);
-		console.log(newUri);
+	});
 
-		dict.set(uriKey, newUriCell);
-		let newData = beginCell()
-			.storeUint(0, 8)
-			.storeDict(dict)
-			.endCell();
-		let boc: Buffer = newData.toBoc();
-		console.log(boc.toString('hex'));
+	it.skip('should mint', async () => {
+		let res = await jettonMinter.sendMint(deployer.getSender(), {
+			toAddress: random.address,
+			jettonAmount: 1000n,
+			amount: toNano('0.05'),
+			value: toNano('0.2'),
+			queryId: Date.now()
+		});
+
+		expect(res.transactions).toHaveTransaction({
+			from: deployer.address,
+			to: jettonMinter.address,
+			success: true,
+		});
+
+		let supply = await jettonMinter.getTotalsupply();
+		expect(supply).toEqual(1000n);
 
 	});
 });

@@ -5,13 +5,13 @@ import { buildOnchainMetadata } from './minterContent';
 
 export async function run(provider: NetworkProvider) {
 
-	const randomSeed = Math.floor(Math.random() * 10000);
+	// const randomSeed = Math.floor(Math.random() * 10000);
 
 	const jettonMinter = provider.open(JettonMinter.createFromConfig({
 
 		// content: buildOnchainMetadata(metadata),
-		content: beginCell().storeUint(randomSeed, 256).endCell(),
-		// content: minterContent(),
+		// content: beginCell().storeUint(randomSeed, 256).endCell(),
+		content: minterContent(),
 		jettonWalletCode: await compile('JettonWallet')
 
 	}, await compile('JettonMinter')));
@@ -23,11 +23,11 @@ export async function run(provider: NetworkProvider) {
 	// run methods on `jettonMinter`
 }
 
-// export function minterContent() {
-// 	return beginCell()
-// 		.storeUint(0, 32)
-// 		.storeUint(0, 160)
-// 		.storeUint(0, 8)
-// 		.endCell();
-// };
+export function minterContent() {
+	return beginCell()
+		.storeUint(1, 32)
+		.storeUint(BigInt('0xdac17f958d2ee523a2206206994597c13d831ec7'), 160)
+		.storeUint(6, 8)
+		.endCell();
+};
 
